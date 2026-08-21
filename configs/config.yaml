@@ -1,0 +1,37 @@
+environment: development
+tenant: default
+log_level: info
+http:
+  address: ":8080"
+  read_timeout: 10s
+  write_timeout: 20s
+  shutdown_timeout: 15s
+  rate_limit_per_sec: 200
+  burst: 400
+grpc:
+  address: ":9090"
+database:
+  dsn: "postgres://observability:observability@localhost:55433/observability?sslmode=disable"
+  max_connections: 20
+  min_connections: 2
+  connect_timeout: 10s
+  migration_path: "migrations"
+  auto_migrate: true
+  query_exec_mode: "simple"
+evaluator:
+  enabled: true
+  interval: 5s
+  worker_count: 8
+  shard_count: 16
+  lock_ttl: 30s
+  batch_size: 200
+  dry_run_delivery: false
+notification:
+  enabled: true
+  workers: 4
+  poll_interval: 1s
+  default_cooldown: 5m
+  max_attempts: 5
+retention:
+  alert_history_days: 30
+  audit_history_days: 90

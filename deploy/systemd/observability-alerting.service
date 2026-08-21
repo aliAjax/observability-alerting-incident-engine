@@ -1,0 +1,13 @@
+[Unit]
+Description=Observability Alerting Engine
+After=network-online.target postgresql.service
+
+[Service]
+WorkingDirectory=/opt/observability-alerting
+EnvironmentFile=/opt/observability-alerting/deploy/app.env
+ExecStart=/opt/observability-alerting/bin/server /opt/observability-alerting/configs/config.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

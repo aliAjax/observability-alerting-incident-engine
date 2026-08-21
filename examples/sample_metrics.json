@@ -1,0 +1,21 @@
+{
+  "source": "demo-api",
+  "events": [
+    {
+      "type": "metric",
+      "labels": {
+        "region": "cn-north"
+      },
+      "numeric_value": 0.92,
+      "occurred_at": "2026-08-19T12:00:00Z"
+    },
+    {
+      "type": "metric",
+      "labels": {
+        "region": "cn-north"
+      },
+      "numeric_value": 0.95,
+      "occurred_at": "2026-08-19T12:01:00Z"
+    }
+  ]
+}

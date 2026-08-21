@@ -35,11 +35,14 @@ func (s *Silence) Normalize(now time.Time) error {
 	if s.EndsAt.IsZero() || !s.EndsAt.After(s.StartsAt) {
 		return errors.New("silence end must be after start")
 	}
+	if s.Matchers == nil {
+		s.Matchers = common.Labels{}
+	}
 	if s.CreatedAt.IsZero() {
 		s.CreatedAt = now
 	}
 	s.UpdatedAt = now
-	s.Active = false
+	s.Active = true
 	return nil
 }
 

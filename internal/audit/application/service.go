@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -33,7 +34,7 @@ func (s *Service) Record(ctx context.Context, tenant, entity, entityID, action, 
 	}
 	record.Normalize(record.OccurredAt)
 	if err := s.repo.Insert(ctx, record); err != nil {
-		return common.Wrap("insert audit record", err)
+		return fmt.Errorf("insert audit record: %v", err)
 	}
 	return nil
 }
@@ -41,7 +42,7 @@ func (s *Service) Record(ctx context.Context, tenant, entity, entityID, action, 
 func (s *Service) List(ctx context.Context, tenant, entity, entityID string, from, to time.Time, limit, offset int) (common.PageResult[domain.Record], error) {
 	items, total, err := s.repo.List(ctx, tenant, entity, entityID, from, to, limit, offset)
 	if err != nil {
-		return common.PageResult[domain.Record]{}, common.Wrap("list audit records", err)
+		return common.PageResult[domain.Record]{}, fmt.Errorf("list audit records: %v", err)
 	}
 	return common.NewPageResult(items, total, limit, offset), nil
 }

@@ -3,8 +3,6 @@ package domain
 import (
 	"encoding/json"
 	"time"
-
-	"github.com/observability-alerting/engine/internal/common"
 )
 
 type Record struct {
@@ -20,16 +18,10 @@ type Record struct {
 }
 
 func (r *Record) Normalize(now time.Time) {
-	if r.ID == "" {
-		r.ID = common.NewID("audit")
-	}
 	if r.Tenant == "" {
 		r.Tenant = "default"
 	}
 	if r.OccurredAt.IsZero() {
 		r.OccurredAt = now
-	}
-	if r.TraceID == "" {
-		r.TraceID = common.NewTraceID()
 	}
 }

@@ -14,15 +14,16 @@ import (
 )
 
 type fakeAuditRepo struct {
-	listErr error
+	insertErr error
+	listErr   error
 }
 
-func (fakeAuditRepo) Insert(context.Context, domain.Record) error { return nil }
+func (f fakeAuditRepo) Insert(context.Context, domain.Record) error { return f.insertErr }
 func (f fakeAuditRepo) List(context.Context, string, string, string, time.Time, time.Time, int, int) ([]domain.Record, int, error) {
 	return nil, 0, f.listErr
 }
 
-func TestAuditListPreservesSentinel(t *testing.T) {
+func TestR009AuditListMissingMaps404(t *testing.T) {
 	repo := fakeAuditRepo{listErr: fmt.Errorf("audit repository miss: %w", common.ErrNotFound)}
 	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
@@ -31,10 +32,27 @@ func TestAuditListPreservesSentinel(t *testing.T) {
 	}
 }
 
-func TestAuditRecordNormalizeCreatesID(t *testing.T) {
+func TestR009AuditRecordMissingSentinel(t *testing.T) {
+	repo := fakeAuditRepo{insertErr: fmt.Errorf("audit insert miss: %w", common.ErrConflict)}
+	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	if err := service.Record(context.Background(), "default", "rule", "rule-1", "update", "alice", map[string]string{"field": "mode"}); !errors.Is(err, common.ErrConflict) {
+		t.Fatalf("Record should preserve ErrConflict, got %v", err)
+	}
+}
+
+func TestR009AuditRecordAutoID(t *testing.T) {
 	record := domain.Record{}
 	record.Normalize(time.Now())
 	if record.ID == "" {
 		t.Fatal("Normalize should create an ID")
+	}
+}
+
+func TestR009AuditRecordAutoTrace(t *testing.T) {
+	record := domain.Record{}
+	record.Normalize(time.Now())
+	if record.TraceID == "" {
+		t.Fatal("Normalize should create a trace ID")
 	}
 }

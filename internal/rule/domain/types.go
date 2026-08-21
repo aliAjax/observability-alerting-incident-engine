@@ -138,7 +138,7 @@ func (r *Rule) Normalize(now time.Time) error {
 }
 
 func (r Rule) Active() bool {
-	return r.Enabled
+	return r.Enabled && r.Mode != ModePaused
 }
 
 func (r Rule) ShouldEvaluate(now time.Time, last time.Time) bool {

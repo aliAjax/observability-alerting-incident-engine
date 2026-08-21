@@ -29,7 +29,7 @@ func (s *Service) Create(ctx context.Context, rule domain.Rule) (domain.Rule, er
 	}
 	created, err := s.repo.Create(ctx, rule)
 	if err != nil {
-		return domain.Rule{}, fmt.Errorf("create rule: %v", err)
+		return domain.Rule{}, fmt.Errorf("create rule: %w", err)
 	}
 	s.logger.Info("rule created", "rule_id", created.ID, "tenant", created.Tenant, "trace_id", common.TraceIDFrom(ctx))
 	return created, nil
@@ -38,7 +38,7 @@ func (s *Service) Create(ctx context.Context, rule domain.Rule) (domain.Rule, er
 func (s *Service) Update(ctx context.Context, id string, patch domain.Rule) (domain.Rule, error) {
 	existing, err := s.repo.Get(ctx, patch.Tenant, id)
 	if err != nil {
-		return domain.Rule{}, fmt.Errorf("get rule: %v", err)
+		return domain.Rule{}, fmt.Errorf("get rule: %w", err)
 	}
 	existing.Name = firstNonEmpty(patch.Name, existing.Name)
 	existing.Description = firstNonEmpty(patch.Description, existing.Description)
@@ -94,7 +94,7 @@ func (s *Service) Update(ctx context.Context, id string, patch domain.Rule) (dom
 func (s *Service) Get(ctx context.Context, tenant, id string) (domain.Rule, error) {
 	rule, err := s.repo.Get(ctx, tenant, id)
 	if err != nil {
-		return domain.Rule{}, fmt.Errorf("get rule: %v", err)
+		return domain.Rule{}, fmt.Errorf("get rule: %w", err)
 	}
 	return rule, nil
 }
@@ -102,7 +102,7 @@ func (s *Service) Get(ctx context.Context, tenant, id string) (domain.Rule, erro
 func (s *Service) List(ctx context.Context, tenant string, limit, offset int, filters map[string]string) (common.PageResult[domain.Rule], error) {
 	items, total, err := s.repo.List(ctx, tenant, limit, offset, filters)
 	if err != nil {
-		return common.PageResult[domain.Rule]{}, fmt.Errorf("list rules: %v", err)
+		return common.PageResult[domain.Rule]{}, fmt.Errorf("list rules: %w", err)
 	}
 	return common.NewPageResult(items, total, limit, offset), nil
 }
@@ -152,7 +152,7 @@ func (s *Service) SetMode(ctx context.Context, tenant, id string, mode domain.Mo
 	case domain.ModeDryRun:
 		rule.Enabled = true
 	default:
-		return domain.Rule{}, fmt.Errorf("set rule mode: %v", common.ErrInvalid)
+		return domain.Rule{}, fmt.Errorf("set rule mode: %w", common.ErrInvalid)
 	}
 	rule.Mode = mode
 	rule.Version++

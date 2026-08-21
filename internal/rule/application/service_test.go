@@ -14,11 +14,12 @@ import (
 )
 
 type fakeRuleRepo struct {
-	getErr error
+	getErr    error
+	createErr error
 }
 
 func (f fakeRuleRepo) Create(context.Context, domain.Rule) (domain.Rule, error) {
-	return domain.Rule{}, nil
+	return domain.Rule{}, f.createErr
 }
 func (f fakeRuleRepo) Update(context.Context, domain.Rule) (domain.Rule, error) {
 	return domain.Rule{}, nil
@@ -48,6 +49,52 @@ func TestRuleGetAndListPreserveSentinel(t *testing.T) {
 	}
 	if _, err := service.List(context.Background(), "default", 10, 0, nil); !errors.Is(err, common.ErrNotFound) {
 		t.Fatalf("List should preserve ErrNotFound, got %v", err)
+	}
+}
+
+func TestR002RuleGetAbsentRule(t *testing.T) {
+	repo := fakeRuleRepo{getErr: fmt.Errorf("repository miss: %w", common.ErrNotFound)}
+	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	if _, err := service.Get(context.Background(), "default", "rule-1"); !errors.Is(err, common.ErrNotFound) {
+		t.Fatalf("Get should preserve ErrNotFound, got %v", err)
+	}
+}
+
+func TestR002RuleCreateBadPayload(t *testing.T) {
+	repo := fakeRuleRepo{createErr: fmt.Errorf("duplicate rule: %w", common.ErrAlreadyExists)}
+	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	rule := domain.Rule{Name: "cpu-high", DataSource: "api-gateway", Type: domain.TypeThreshold, Condition: domain.Condition{Field: "cpu", Operator: ">"}}
+
+	if _, err := service.Create(context.Background(), rule); !errors.Is(err, common.ErrAlreadyExists) {
+		t.Fatalf("Create should preserve ErrAlreadyExists, got %v", err)
+	}
+}
+
+func TestR002RuleUpdateAbsentRule(t *testing.T) {
+	repo := fakeRuleRepo{getErr: fmt.Errorf("repository miss: %w", common.ErrNotFound)}
+	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	if _, err := service.Update(context.Background(), "rule-1", domain.Rule{Tenant: "default"}); !errors.Is(err, common.ErrNotFound) {
+		t.Fatalf("Update should preserve ErrNotFound, got %v", err)
+	}
+}
+
+func TestR002RuleListAbsentRule(t *testing.T) {
+	repo := fakeRuleRepo{getErr: fmt.Errorf("repository miss: %w", common.ErrNotFound)}
+	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	if _, err := service.List(context.Background(), "default", 10, 0, nil); !errors.Is(err, common.ErrNotFound) {
+		t.Fatalf("List should preserve ErrNotFound, got %v", err)
+	}
+}
+
+func TestR002RuleSetModeBadEnum(t *testing.T) {
+	repo := fakeRuleRepo{}
+	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	if _, err := service.SetMode(context.Background(), "default", "rule-1", domain.Mode("invalid")); !errors.Is(err, common.ErrInvalid) {
+		t.Fatalf("SetMode should preserve ErrInvalid, got %v", err)
 	}
 }
 

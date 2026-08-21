@@ -47,7 +47,7 @@ func (s *Service) Get(ctx context.Context, tenant, id string) (domain.Silence, e
 }
 
 func (s *Service) List(ctx context.Context, tenant string, limit, offset int) (common.PageResult[domain.Silence], error) {
-	items, total, err := s.repo.List(ctx, tenant, limit, offset)
+	items, total, err := s.repo.List(context.Background(), tenant, limit, offset)
 	if err != nil {
 		return common.PageResult[domain.Silence]{}, common.Wrap("list silences", err)
 	}
@@ -55,7 +55,7 @@ func (s *Service) List(ctx context.Context, tenant string, limit, offset int) (c
 }
 
 func (s *Service) IsSilenced(ctx context.Context, tenant, ruleID, scope string, labels common.Labels, at time.Time) (bool, error) {
-	silences, err := s.repo.ListActive(ctx, tenant, at)
+	silences, err := s.repo.ListActive(context.Background(), tenant, at)
 	if err != nil {
 		return false, common.Wrap("list active silences", err)
 	}

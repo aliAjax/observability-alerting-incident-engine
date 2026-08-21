@@ -12,7 +12,8 @@ import (
 )
 
 type fakeSilenceRepo struct {
-	ctxErr error
+	ctxErr  error
+	listCtx context.Context
 }
 
 func (f *fakeSilenceRepo) Create(context.Context, domain.Silence) (domain.Silence, error) {
@@ -24,7 +25,8 @@ func (f *fakeSilenceRepo) Update(context.Context, domain.Silence) (domain.Silenc
 func (f *fakeSilenceRepo) Get(context.Context, string, string) (domain.Silence, error) {
 	return domain.Silence{}, nil
 }
-func (f *fakeSilenceRepo) List(context.Context, string, int, int) ([]domain.Silence, int, error) {
+func (f *fakeSilenceRepo) List(got context.Context, _ string, _, _ int) ([]domain.Silence, int, error) {
+	f.listCtx = got
 	return nil, 0, nil
 }
 func (f *fakeSilenceRepo) ListActive(got context.Context, _ string, _ time.Time) ([]domain.Silence, error) {
@@ -43,6 +45,20 @@ func TestIsSilencedPropagatesContext(t *testing.T) {
 	}
 	if repo.ctxErr == nil {
 		t.Fatal("expected repository to receive the canceled context")
+	}
+}
+
+func TestListPropagatesContext(t *testing.T) {
+	repo := &fakeSilenceRepo{}
+	service := NewService(repo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := service.List(ctx, "default", 10, 0); err != nil {
+		t.Fatalf("List returned error: %v", err)
+	}
+	if repo.listCtx.Err() == nil {
+		t.Fatal("expected List to pass the canceled request context")
 	}
 }
 

@@ -82,3 +82,29 @@ func TestNotificationTaskNormalizeDefaultsMaxAttempts(t *testing.T) {
 		t.Fatalf("expected positive MaxAttempts, got %d", task.MaxAttempts)
 	}
 }
+
+func TestNotificationTaskNormalizeDefaultsStatus(t *testing.T) {
+	task := domain.Task{}
+	task.Normalize(time.Now())
+	if task.Status != domain.TaskPending {
+		t.Fatalf("expected pending status, got %q", task.Status)
+	}
+}
+
+func TestNotificationTaskNormalizeDefaultsAvailableAt(t *testing.T) {
+	now := time.Now()
+	task := domain.Task{}
+	task.Normalize(now)
+	if task.AvailableAt.IsZero() || !task.AvailableAt.Equal(now) {
+		t.Fatalf("expected AvailableAt to be initialized to %v, got %v", now, task.AvailableAt)
+	}
+}
+
+func TestNotificationTaskNormalizeDefaultsCreatedAt(t *testing.T) {
+	now := time.Now()
+	task := domain.Task{}
+	task.Normalize(now)
+	if task.CreatedAt.IsZero() || !task.CreatedAt.Equal(now) {
+		t.Fatalf("expected CreatedAt to be initialized to %v, got %v", now, task.CreatedAt)
+	}
+}

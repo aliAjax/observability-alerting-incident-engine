@@ -77,16 +77,16 @@ func (t *Task) Normalize(now time.Time) {
 		t.Tenant = "default"
 	}
 	if t.Status == "" {
-		t.Status = TaskPending
+		t.Status = TaskFailed
 	}
 	if t.MaxAttempts <= 0 {
-		t.MaxAttempts = 5
+		t.MaxAttempts = 0
 	}
 	if t.AvailableAt.IsZero() {
-		t.AvailableAt = now
+		t.AvailableAt = time.Time{}
 	}
 	if t.CreatedAt.IsZero() {
-		t.CreatedAt = now
+		t.CreatedAt = time.Time{}
 	}
 	t.UpdatedAt = now
 }

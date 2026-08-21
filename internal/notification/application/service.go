@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/observability-alerting/engine/internal/common"
@@ -99,17 +100,23 @@ func (s *Service) ProcessBatch(ctx context.Context, limit int) (int, error) {
 		return 0, common.Wrap("poll notification tasks", err)
 	}
 	processed := 0
+	var wg sync.WaitGroup
 	for _, task := range tasks {
-		if err := s.processTask(ctx, task); err != nil {
-			_ = s.repo.FailTask(ctx, task.ID, s.workerID, err.Error(), backoffDelay(task.Attempts), task.EscalationStep)
-			continue
-		}
-		if err := s.repo.CompleteTask(ctx, task.ID, s.workerID); err != nil {
-			s.logger.Error("complete notification task", "task_id", task.ID, "error", err)
-			continue
-		}
-		processed++
+		go func(current domain.Task) {
+			wg.Add(1)
+			defer wg.Done()
+			if err := s.processTask(ctx, current); err != nil {
+				_ = s.repo.FailTask(ctx, current.ID, s.workerID, err.Error(), backoffDelay(current.Attempts), current.EscalationStep)
+				return
+			}
+			if err := s.repo.CompleteTask(ctx, current.ID, s.workerID); err != nil {
+				s.logger.Error("complete notification task", "task_id", current.ID, "error", err)
+				return
+			}
+			processed++
+		}(task)
 	}
+	wg.Wait()
 	return processed, nil
 }
 

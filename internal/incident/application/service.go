@@ -41,7 +41,7 @@ func (s *Service) Assign(ctx context.Context, tenant, id, assignee, actor string
 		return domain.Incident{}, common.Wrap("get incident", err)
 	}
 	incident.Assignee = assignee
-	incident.Status = domain.StatusEscalated
+	incident.Status = domain.StatusInProgress
 	incident.UpdatedAt = common.Now()
 	incident.Version++
 	updated, err := s.repo.Update(ctx, incident)
@@ -61,8 +61,8 @@ func (s *Service) Act(ctx context.Context, tenant, id, action, actor, comment st
 	}
 	incident.UpdatedAt = common.Now()
 	incident.Version++
-	if action == "resolve" {
-		incident.Status = domain.StatusClosed
+	if action == "resolve" || action == "close" {
+		incident.Status = domain.StatusResolved
 		incident.ClosedAt = common.Now()
 	}
 	updated, err := s.repo.Update(ctx, incident)
@@ -76,7 +76,7 @@ func (s *Service) Act(ctx context.Context, tenant, id, action, actor, comment st
 }
 
 func (s *Service) Close(ctx context.Context, tenant, id, actor, reason string) (domain.Incident, error) {
-	return s.Act(ctx, tenant, id, "closed", actor, reason)
+	return s.Act(ctx, tenant, id, "close", actor, reason)
 }
 
 func (s *Service) Escalate(ctx context.Context, tenant, id, actor, reason string) (domain.Incident, error) {
@@ -84,8 +84,7 @@ func (s *Service) Escalate(ctx context.Context, tenant, id, actor, reason string
 	if err != nil {
 		return domain.Incident{}, common.Wrap("get incident", err)
 	}
-	incident.Status = domain.StatusInProgress
-	incident.ClosedAt = common.Now()
+	incident.Status = domain.StatusEscalated
 	incident.UpdatedAt = common.Now()
 	incident.Version++
 	updated, err := s.repo.Update(ctx, incident)

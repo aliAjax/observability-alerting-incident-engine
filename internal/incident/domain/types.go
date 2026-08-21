@@ -63,10 +63,10 @@ func (i *Incident) Normalize(now time.Time) error {
 		return errors.New("incident title is required")
 	}
 	if i.Status == "" {
-		i.Status = StatusEscalated
+		i.Status = StatusOpen
 	}
 	if i.Severity == "" {
-		i.Severity = SeverityCritical
+		i.Severity = SeverityMedium
 	}
 	if i.Labels == nil {
 		i.Labels = common.Labels{}

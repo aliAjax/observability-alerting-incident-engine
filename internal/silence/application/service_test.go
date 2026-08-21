@@ -46,7 +46,7 @@ func TestIsSilencedPropagatesContext(t *testing.T) {
 	}
 }
 
-func TestSilenceNormalizeInitializesMatchers(t *testing.T) {
+func TestR005SilenceNewMatchers(t *testing.T) {
 	now := time.Now()
 	silence := domain.Silence{StartsAt: now, EndsAt: now.Add(time.Hour)}
 	if err := silence.Normalize(time.Now()); err != nil {
@@ -54,6 +54,17 @@ func TestSilenceNormalizeInitializesMatchers(t *testing.T) {
 	}
 	if silence.Matchers == nil {
 		t.Fatal("Normalize should initialize Matchers")
+	}
+}
+
+func TestR005SilenceNewActiveFlag(t *testing.T) {
+	now := time.Now()
+	silence := domain.Silence{StartsAt: now, EndsAt: now.Add(time.Hour)}
+	if err := silence.Normalize(time.Now()); err != nil {
+		t.Fatalf("Normalize returned error: %v", err)
+	}
+	if !silence.Active {
+		t.Fatal("Normalize should mark a new silence active")
 	}
 }
 

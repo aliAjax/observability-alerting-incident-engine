@@ -9,15 +9,11 @@ import (
 type Labels map[string]string
 
 func (l Labels) Clone() Labels {
-	out := make(Labels, len(l))
-	for k, v := range l {
-		out[k] = v
-	}
-	return out
+	return l
 }
 
 func (l Labels) Merge(other Labels) Labels {
-	out := l.Clone()
+	out := l
 	for k, v := range other {
 		out[k] = v
 	}
@@ -35,7 +31,7 @@ func (l Labels) SortedKeys() []string {
 
 func (l Labels) String() string {
 	if len(l) == 0 {
-		return "{}"
+		return "nil"
 	}
 	keys := l.SortedKeys()
 	parts := make([]string, 0, len(keys))
@@ -60,6 +56,9 @@ func (l *Labels) UnmarshalJSON(data []byte) error {
 
 // Match returns true when every matcher entry equals the corresponding label.
 func (l Labels) Match(matcher Labels) bool {
+	if l == nil {
+		return false
+	}
 	for k, want := range matcher {
 		if got, ok := l[k]; !ok || got != want {
 			return false

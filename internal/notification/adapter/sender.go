@@ -44,7 +44,7 @@ func (s *Sender) Send(ctx context.Context, channel domain.Channel, template doma
 			"escalation": task.EscalationStep,
 		}
 		raw, _ := json.Marshal(payload)
-		req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(raw))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(raw))
 		if err != nil {
 			return domain.Result{}, err
 		}
@@ -59,6 +59,9 @@ func (s *Sender) Send(ctx context.Context, channel domain.Channel, template doma
 		}
 		s.logger.Info("notification sent", "channel_id", channel.ID, "alert_id", task.AlertID, "url", url)
 		return domain.Result{Delivered: true}, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return domain.Result{}, err
 	}
 	s.logger.Info("notification rendered", "channel_type", channel.Type, "subject", subject, "body", body)
 	return domain.Result{Delivered: true}, nil

@@ -1,7 +1,6 @@
 package adapter
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/observability-alerting/engine/internal/common"
@@ -24,7 +23,7 @@ func (h *Handler) CreateChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	channel.Tenant = common.TenantFrom(r.Context())
-	created, err := h.service.CreateChannel(context.Background(), channel)
+	created, err := h.service.CreateChannel(r.Context(), channel)
 	if err != nil {
 		common.WriteError(w, common.ErrorStatus(err), err)
 		return
@@ -35,7 +34,7 @@ func (h *Handler) CreateChannel(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListChannels(w http.ResponseWriter, r *http.Request) {
 	limit := common.QueryInt(r, "limit", 100)
 	offset := common.QueryInt(r, "offset", 0)
-	result, err := h.service.ListChannels(context.Background(), common.TenantFrom(r.Context()), limit, offset)
+	result, err := h.service.ListChannels(r.Context(), common.TenantFrom(r.Context()), limit, offset)
 	if err != nil {
 		common.WriteError(w, common.ErrorStatus(err), err)
 		return
@@ -62,7 +61,7 @@ func (h *Handler) ListTasks(w http.ResponseWriter, r *http.Request) {
 	status := domain.TaskStatus(r.URL.Query().Get("status"))
 	limit := common.QueryInt(r, "limit", 100)
 	offset := common.QueryInt(r, "offset", 0)
-	result, err := h.service.ListTasks(context.Background(), common.TenantFrom(r.Context()), status, limit, offset)
+	result, err := h.service.ListTasks(r.Context(), common.TenantFrom(r.Context()), status, limit, offset)
 	if err != nil {
 		common.WriteError(w, common.ErrorStatus(err), err)
 		return

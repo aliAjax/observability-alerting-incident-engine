@@ -30,7 +30,10 @@ type Task struct {
 }
 
 func (t Task) Available(now time.Time) bool {
-	return t.Status == TaskPending && !t.AvailableAt.After(now)
+	if t.Status != TaskPending {
+		return false
+	}
+	return t.AvailableAt.Before(now)
 }
 
 type Repository interface {

@@ -1,7 +1,6 @@
 package adapter
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -24,9 +23,9 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	to := common.QueryTime(r, "to", time.Now())
 	limit := common.QueryInt(r, "limit", 100)
 	offset := common.QueryInt(r, "offset", 0)
-	result, err := h.service.List(context.Background(), common.TenantFrom(r.Context()), entity, entityID, from, to, limit, offset)
+	result, err := h.service.List(r.Context(), common.TenantFrom(r.Context()), entity, entityID, from, to, limit, offset)
 	if err != nil {
-		common.WriteError(w, http.StatusInternalServerError, err)
+		common.WriteError(w, common.ErrorStatus(err), err)
 		return
 	}
 	common.WriteOK(w, result)

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/observability-alerting/engine/internal/common"
@@ -99,11 +100,11 @@ func (s *Service) ProcessBatch(ctx context.Context, limit int) (int, error) {
 	if err != nil {
 		return 0, common.Wrap("poll notification tasks", err)
 	}
-	processed := 0
+	processed := int64(0)
 	var wg sync.WaitGroup
+	wg.Add(len(tasks))
 	for _, task := range tasks {
 		go func(current domain.Task) {
-			wg.Add(1)
 			defer wg.Done()
 			if err := s.processTask(ctx, current); err != nil {
 				_ = s.repo.FailTask(ctx, current.ID, s.workerID, err.Error(), backoffDelay(current.Attempts), current.EscalationStep)
@@ -113,11 +114,11 @@ func (s *Service) ProcessBatch(ctx context.Context, limit int) (int, error) {
 				s.logger.Error("complete notification task", "task_id", current.ID, "error", err)
 				return
 			}
-			processed++
+			atomic.AddInt64(&processed, 1)
 		}(task)
 	}
 	wg.Wait()
-	return processed, nil
+	return int(processed), nil
 }
 
 func (s *Service) processTask(ctx context.Context, task domain.Task) error {

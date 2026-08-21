@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -106,10 +107,15 @@ func (e *IngestionEvent) Fill(now time.Time) {
 }
 
 func (e IngestionEvent) DedupeFingerprint() string {
+	// Tenant and NumericValue are part of the identity so that events from
+	// different tenants or metrics with different values are not collapsed
+	// into a single dedupe entry.
 	return strings.Join([]string{
+		e.Tenant,
 		e.Source,
 		string(e.Type),
 		e.Labels.String(),
 		e.TextValue,
+		strconv.FormatFloat(e.NumericValue, 'f', -1, 64),
 	}, "|")
 }

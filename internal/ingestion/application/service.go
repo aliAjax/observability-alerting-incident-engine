@@ -87,15 +87,19 @@ func (s *Service) Ingest(ctx context.Context, evt domain.IngestionEvent) (domain
 }
 
 func (s *Service) shouldSample(evt domain.IngestionEvent) bool {
+	// Sampling disabled: keep every event.
 	if s.sampleEvery == 0 {
-		return false
+		return true
 	}
-	slot := evt.OccurredAt.Unix() / int64(s.sampleEvery)
-		return slot%2 == 1
+	// Keep the first (even) slot of every sampling window, drop the odd one.
+	// UnixNano and the duration are both in nanoseconds, so the slot index
+	// advances by one for each elapsed sampling window.
+	slot := evt.OccurredAt.UnixNano() / int64(s.sampleEvery)
+	return slot%2 == 0
 }
 
 func (s *Service) dedupe(ctx context.Context, events []domain.IngestionEvent) ([]domain.IngestionEvent, error) {
-	seen := map[string]struct{}{}
+	seen := make(map[string]struct{}, len(events))
 	out := make([]domain.IngestionEvent, 0, len(events))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -104,10 +108,17 @@ func (s *Service) dedupe(ctx context.Context, events []domain.IngestionEvent) ([
 		wg.Add(1)
 		go func(e domain.IngestionEvent) {
 			defer wg.Done()
-			_, ok := seen[e.DedupeKey]
-			if ok {
+			// Reserve the key under the lock so a concurrent duplicate stops
+			// here; the map and the output slice are both only ever touched
+			// while holding the lock, which keeps the dedupe map race-free.
+			mu.Lock()
+			if _, ok := seen[e.DedupeKey]; ok {
+				mu.Unlock()
 				return
 			}
+			seen[e.DedupeKey] = struct{}{}
+			mu.Unlock()
+
 			exists, err := s.repo.ExistsDedupe(ctx, e.DedupeKey, s.dedupeWindow)
 			if err != nil {
 				errCh <- err
@@ -117,11 +128,8 @@ func (s *Service) dedupe(ctx context.Context, events []domain.IngestionEvent) ([
 				return
 			}
 			mu.Lock()
-			if _, ok := seen[e.DedupeKey]; !ok {
-				seen[e.DedupeKey] = struct{}{}
-			}
-			mu.Unlock()
 			out = append(out, e)
+			mu.Unlock()
 		}(evt)
 	}
 	wg.Wait()

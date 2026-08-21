@@ -40,7 +40,7 @@ func (s *QueueService) Enqueue(ctx context.Context, topic string, payload any) e
 		AvailableAt: common.Now(),
 		CreatedAt:   common.Now(),
 	}
-	if err := s.repo.Enqueue(context.Background(), task); err != nil {
+	if err := s.repo.Enqueue(ctx, task); err != nil {
 		return common.Wrap("enqueue task", err)
 	}
 	return nil
@@ -50,7 +50,7 @@ func (s *QueueService) Poll(ctx context.Context, topic string, limit int) ([]dom
 	if limit <= 0 {
 		limit = 10
 	}
-	tasks, err := s.repo.Poll(context.Background(), topic, limit, common.Now(), s.lockTTL, s.owner)
+	tasks, err := s.repo.Poll(ctx, topic, limit, common.Now(), s.lockTTL, s.owner)
 	if err != nil {
 		return nil, common.Wrap("poll tasks", err)
 	}
@@ -58,14 +58,14 @@ func (s *QueueService) Poll(ctx context.Context, topic string, limit int) ([]dom
 }
 
 func (s *QueueService) Complete(ctx context.Context, id string) error {
-	if err := s.repo.Complete(context.Background(), id, s.owner); err != nil {
+	if err := s.repo.Complete(ctx, id, s.owner); err != nil {
 		return common.Wrap("complete task", err)
 	}
 	return nil
 }
 
 func (s *QueueService) Fail(ctx context.Context, id string, cause error) error {
-	task, err := s.repo.PollByID(context.Background(), id)
+	task, err := s.repo.PollByID(ctx, id)
 	if err != nil {
 		return common.Wrap("load task", err)
 	}
@@ -98,11 +98,11 @@ func (s *QueueService) Handle(ctx context.Context, topic string, limit int, fn f
 	}
 	processed := 0
 	for _, task := range tasks {
-		if err := fn(context.Background(), task); err != nil {
-			_ = s.Fail(context.Background(), task.ID, err)
+		if err := fn(ctx, task); err != nil {
+			_ = s.Fail(ctx, task.ID, err)
 			continue
 		}
-		if err := s.Complete(context.Background(), task.ID); err != nil && !errors.Is(err, common.ErrNotFound) {
+		if err := s.Complete(ctx, task.ID); err != nil && !errors.Is(err, common.ErrNotFound) {
 			continue
 		}
 		processed++

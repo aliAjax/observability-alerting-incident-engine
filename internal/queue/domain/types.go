@@ -33,7 +33,7 @@ func (t Task) Available(now time.Time) bool {
 	if t.Status != TaskPending {
 		return false
 	}
-	return t.AvailableAt.Before(now)
+	return !t.AvailableAt.After(now)
 }
 
 type Repository interface {

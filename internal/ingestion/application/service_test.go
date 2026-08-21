@@ -71,7 +71,7 @@ func (fakeQueueRepo) Requeue(_ context.Context, _ string, _ string, _ time.Durat
 }
 func (fakeQueueRepo) CountPending(_ context.Context, _ string) (int, error) { return 0, nil }
 
-func TestIngestBatchConcurrentDedupeKeepsAllDistinct(t *testing.T) {
+func TestR001ConcurrentIngestKeepsAllKeys(t *testing.T) {
 	repo := newFakeIngestionRepo()
 	queue := queueapplication.NewQueueService(fakeQueueRepo{}, "worker", time.Minute)
 	service := NewService(repo, queue, slog.New(slog.NewTextHandler(io.Discard, nil)), 0, time.Minute)
@@ -88,20 +88,79 @@ func TestIngestBatchConcurrentDedupeKeepsAllDistinct(t *testing.T) {
 		})
 	}
 
-	got, err := service.IngestBatch(context.Background(), domain.Batch{Tenant: "default", Source: "api-gateway", Events: events})
-	if err != nil {
+	mid := len(events) / 2
+	start := make(chan struct{})
+	results := make(chan int, 2)
+	errs := make(chan error, 2)
+	var wg sync.WaitGroup
+	for _, part := range [][]domain.IngestionEvent{events[:mid], events[mid:]} {
+		wg.Add(1)
+		go func(batch []domain.IngestionEvent) {
+			defer wg.Done()
+			<-start
+			got, err := service.IngestBatch(context.Background(), domain.Batch{Tenant: "default", Source: "api-gateway", Events: batch})
+			if err != nil {
+				errs <- err
+				return
+			}
+			results <- got
+		}(part)
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+	close(errs)
+	for err := range errs {
 		t.Fatalf("IngestBatch returned error: %v", err)
 	}
-	if got != len(events) {
-		t.Fatalf("expected %d deduplicated events, got %d", len(events), got)
+	total := 0
+	for got := range results {
+		total += got
+	}
+	if total != len(events) {
+		t.Fatalf("expected %d deduplicated events, got %d", len(events), total)
 	}
 }
 
-func TestDedupeFingerprintIncludesTenant(t *testing.T) {
+
+func TestR001FingerprintTenantField(t *testing.T) {
 	first := domain.IngestionEvent{Tenant: "alpha", Source: "api", Type: domain.EventMetric, Labels: common.Labels{"a": "1"}}
 	second := first
 	second.Tenant = "beta"
 	if first.DedupeFingerprint() == second.DedupeFingerprint() {
 		t.Fatal("dedupe fingerprint must include tenant")
+	}
+}
+
+func TestR001FingerprintNumericField(t *testing.T) {
+	first := domain.IngestionEvent{Tenant: "default", Source: "api", Type: domain.EventMetric, Labels: common.Labels{"a": "1"}, NumericValue: 11}
+	second := first
+	second.NumericValue = 22
+	if first.DedupeFingerprint() == second.DedupeFingerprint() {
+		t.Fatal("dedupe fingerprint must include numeric value")
+	}
+}
+
+func TestR001SamplingExpectedSlots(t *testing.T) {
+	repo := newFakeIngestionRepo()
+	queue := queueapplication.NewQueueService(fakeQueueRepo{}, "worker", time.Minute)
+	service := NewService(repo, queue, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second, time.Minute)
+	base := time.Unix(0, 0)
+
+	if !service.shouldSample(domain.IngestionEvent{OccurredAt: base}) {
+		t.Fatal("event in the first sampling slot should be accepted")
+	}
+	if service.shouldSample(domain.IngestionEvent{OccurredAt: base.Add(time.Second)}) {
+		t.Fatal("event in the second sampling slot should be dropped")
+	}
+}
+
+func TestR001SamplingDisabledKeepsAll(t *testing.T) {
+	repo := newFakeIngestionRepo()
+	queue := queueapplication.NewQueueService(fakeQueueRepo{}, "worker", time.Minute)
+	service := NewService(repo, queue, slog.New(slog.NewTextHandler(io.Discard, nil)), 0, time.Minute)
+
+	if !service.shouldSample(domain.IngestionEvent{OccurredAt: time.Now()}) {
+		t.Fatal("sampling disabled should accept every event")
 	}
 }

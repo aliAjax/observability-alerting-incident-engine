@@ -107,7 +107,6 @@ func (e *IngestionEvent) Fill(now time.Time) {
 
 func (e IngestionEvent) DedupeFingerprint() string {
 	return strings.Join([]string{
-		e.Tenant,
 		e.Source,
 		string(e.Type),
 		e.Labels.String(),

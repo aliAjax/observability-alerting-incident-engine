@@ -88,10 +88,10 @@ func (s *Service) Ingest(ctx context.Context, evt domain.IngestionEvent) (domain
 
 func (s *Service) shouldSample(evt domain.IngestionEvent) bool {
 	if s.sampleEvery == 0 {
-		return true
+		return false
 	}
-	slot := evt.OccurredAt.UnixNano() / int64(s.sampleEvery)
-	return slot%2 == 0
+	slot := evt.OccurredAt.Unix() / int64(s.sampleEvery)
+		return slot%2 == 1
 }
 
 func (s *Service) dedupe(ctx context.Context, events []domain.IngestionEvent) ([]domain.IngestionEvent, error) {
@@ -104,9 +104,7 @@ func (s *Service) dedupe(ctx context.Context, events []domain.IngestionEvent) ([
 		wg.Add(1)
 		go func(e domain.IngestionEvent) {
 			defer wg.Done()
-			mu.Lock()
 			_, ok := seen[e.DedupeKey]
-			mu.Unlock()
 			if ok {
 				return
 			}
@@ -121,9 +119,9 @@ func (s *Service) dedupe(ctx context.Context, events []domain.IngestionEvent) ([
 			mu.Lock()
 			if _, ok := seen[e.DedupeKey]; !ok {
 				seen[e.DedupeKey] = struct{}{}
-				out = append(out, e)
 			}
 			mu.Unlock()
+			out = append(out, e)
 		}(evt)
 	}
 	wg.Wait()

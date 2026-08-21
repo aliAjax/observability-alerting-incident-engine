@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -58,13 +59,13 @@ func (s *Service) ApplyEvaluation(ctx context.Context, eval domain.Evaluation) (
 func (s *Service) Resolve(ctx context.Context, tenant, alertID, reason string) (domain.Alert, error) {
 	alert, err := s.repo.GetAlert(ctx, tenant, alertID)
 	if err != nil {
-		return domain.Alert{}, common.Wrap("get alert", err)
+		return domain.Alert{}, fmt.Errorf("get alert: %v", err)
 	}
 	if alert.Status == domain.StatusResolved {
 		return alert, nil
 	}
 	if err := s.repo.Transition(ctx, alertID, alert.Status, domain.StatusResolved, reason, "", common.TraceIDFrom(ctx), common.Now()); err != nil {
-		return domain.Alert{}, common.Wrap("resolve alert", err)
+		return domain.Alert{}, fmt.Errorf("resolve alert: %v", err)
 	}
 	alert, err = s.repo.GetAlert(ctx, tenant, alertID)
 	return alert, err
@@ -79,7 +80,7 @@ func (s *Service) Acknowledge(ctx context.Context, tenant, alertID, actor string
 		return alert, nil
 	}
 	if err := s.repo.Transition(ctx, alertID, alert.Status, domain.StatusAcknowledged, "acknowledged by "+actor, actor, common.TraceIDFrom(ctx), common.Now()); err != nil {
-		return domain.Alert{}, common.Wrap("acknowledge alert", err)
+		return domain.Alert{}, fmt.Errorf("acknowledge alert: %v", err)
 	}
 	return s.repo.GetAlert(ctx, tenant, alertID)
 }
@@ -101,7 +102,7 @@ func (s *Service) Silence(ctx context.Context, tenant, alertID, actor string) (d
 func (s *Service) List(ctx context.Context, tenant string, status domain.Status, ruleID string, limit, offset int) (common.PageResult[domain.Alert], error) {
 	items, total, err := s.repo.ListAlerts(ctx, tenant, status, ruleID, limit, offset)
 	if err != nil {
-		return common.PageResult[domain.Alert]{}, common.Wrap("list alerts", err)
+		return common.PageResult[domain.Alert]{}, fmt.Errorf("list alerts: %v", err)
 	}
 	return common.NewPageResult(items, total, limit, offset), nil
 }
@@ -109,7 +110,7 @@ func (s *Service) List(ctx context.Context, tenant string, status domain.Status,
 func (s *Service) History(ctx context.Context, alertID string, from, to time.Time, limit, offset int) (common.PageResult[domain.Transition], error) {
 	items, total, err := s.repo.ListTransitions(ctx, alertID, from, to, limit, offset)
 	if err != nil {
-		return common.PageResult[domain.Transition]{}, common.Wrap("list alert history", err)
+		return common.PageResult[domain.Transition]{}, fmt.Errorf("list alert history: %v", err)
 	}
 	return common.NewPageResult(items, total, limit, offset), nil
 }
@@ -117,7 +118,7 @@ func (s *Service) History(ctx context.Context, alertID string, from, to time.Tim
 func (s *Service) Observations(ctx context.Context, alertID string, from, to time.Time, limit, offset int) (common.PageResult[domain.Observation], error) {
 	items, total, err := s.repo.ListObservations(ctx, alertID, from, to, limit, offset)
 	if err != nil {
-		return common.PageResult[domain.Observation]{}, common.Wrap("list observations", err)
+		return common.PageResult[domain.Observation]{}, fmt.Errorf("list observations: %v", err)
 	}
 	return common.NewPageResult(items, total, limit, offset), nil
 }
@@ -125,7 +126,7 @@ func (s *Service) Observations(ctx context.Context, alertID string, from, to tim
 func (s *Service) Get(ctx context.Context, tenant, id string) (domain.Alert, error) {
 	alert, err := s.repo.GetAlert(ctx, tenant, id)
 	if err != nil {
-		return domain.Alert{}, common.Wrap("get alert", err)
+		return domain.Alert{}, fmt.Errorf("get alert: %v", err)
 	}
 	return alert, nil
 }

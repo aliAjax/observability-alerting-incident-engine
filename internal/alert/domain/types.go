@@ -111,7 +111,7 @@ func ValidateTransition(from, to Status) error {
 	allowed := map[Status][]Status{
 		StatusPending:      {StatusFiring, StatusResolved},
 		StatusFiring:       {StatusResolved, StatusAcknowledged, StatusSilenced},
-		StatusResolved:     {StatusFiring},
+		StatusResolved:     {StatusPending},
 		StatusAcknowledged: {StatusFiring, StatusResolved, StatusSilenced},
 		StatusSilenced:     {StatusFiring, StatusResolved, StatusAcknowledged},
 	}
